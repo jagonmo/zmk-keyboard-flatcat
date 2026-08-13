@@ -1,0 +1,16 @@
+manifest:
+  remotes:
+    - name: zmkfirmware
+      url-base: https://github.com/zmkfirmware
+    - name: jagonmo
+      url-base: https://github.com/jagonmo
+  projects:
+    - name: zmk
+      remote: zmkfirmware
+      revision: main
+      import: app/west.yml
+    - name: zmk-pro-rgb
+      remote: jagonmo
+      revision: main
+  self:
+    path: config

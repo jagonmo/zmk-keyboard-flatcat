@@ -1,0 +1,6 @@
+if SHIELD_FLATCAT
+
+config ZMK_KEYBOARD_NAME
+    default "FlatCat"
+
+endif
