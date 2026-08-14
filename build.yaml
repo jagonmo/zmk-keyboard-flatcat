@@ -2,4 +2,4 @@
 include:
   - board: nice_nano//zmk
     shield: flatcat
-    artifact-name: flatcat-firmware
+    artifact-name: flatcat
