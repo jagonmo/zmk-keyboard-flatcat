@@ -1,7 +1,7 @@
 # FlatCat ZMK Config
 
 ZMK firmware configuration for the FlatCat keyboard — a 79-key unibody
-keyboard powered by a nice!nano v2 (nRF52840).
+keyboard powered by a holyiot 18018(nRF52840), uses nicenano v2 configuration.
 
 ## Features
 
