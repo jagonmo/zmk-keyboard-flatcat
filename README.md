@@ -10,6 +10,7 @@ powered by a Holyiot 18010 (nRF52840), but uses configurations of nice!nano v2.
 - Bluetooth with 5 device profiles + USB
 - Status indicators: caps lock, Bluetooth profile, output mode, battery
 - Random effect and colour every time the keyboard wakes from idle
+- **ZMK Studio** support — edit the keymap live over USB
 - Battery reporting
 
 ## Building
@@ -30,6 +31,18 @@ Download it from the run's artifacts and flash it to your nice!nano.
 | `RGBP_BRD` | Brightness down |
 | `RGBP_SPI` | Speed up        |
 | `RGBP_SPD` | Speed down      |
+
+## ZMK Studio
+
+The firmware is built with [ZMK Studio](https://zmk.dev/docs/features/studio)
+support, so you can rebind keys live over USB without recompiling.
+
+1. Connect the keyboard by USB.
+2. Open [my.zmk.dev](https://my.zmk.dev) in a Chromium-based browser.
+3. Studio starts locked. Press **LOWER + LSHIFT** to unlock, then edit away.
+
+The unlock key is bound to `&studio_unlock` on the Lower layer. To skip the
+lock entirely, set `CONFIG_ZMK_STUDIO_LOCKING=n` in `config/flatcat.conf`.
 
 ## Random on wake
 
