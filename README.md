@@ -9,7 +9,7 @@ keyboard powered by a nice!nano v2 (nRF52840).
   [zmk-pro-rgb](https://github.com/jagonmo/zmk-pro-rgb) module
 - Bluetooth 5.0 with 5 device profiles
 - USB-C wired mode
-- Caps-lock LED indicator (green blink on the CAPS key)
+- Caps-lock LED indicator
 
 ## Building
 
