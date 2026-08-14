@@ -12,6 +12,7 @@ shield) and a **zmk-config** (it builds the firmware via GitHub Actions).
 - **Per-key RGB** — 36 effects via [zmk-pro-rgb](https://github.com/jagonmo/zmk-pro-rgb)
 - Bluetooth with 5 device profiles + USB
 - Status indicators: caps lock, Bluetooth profile, output mode, battery
+- Random effect and colour every time the keyboard wakes from idle
 - Battery reporting
 
 ## Building
@@ -32,6 +33,14 @@ Download it from the run's artifacts and flash it to your nice!nano.
 | `RGBP_BRD` | Brightness down |
 | `RGBP_SPI` | Speed up        |
 | `RGBP_SPD` | Speed down      |
+
+## Random on wake
+
+Every time the keyboard wakes from idle it jumps to a random effect, so the
+lighting is different each time you sit down. Single-colour effects also get
+a random hue; rainbow effects keep their own palette.
+
+Turn it off with `CONFIG_RGB_PRO_RANDOM_ON_WAKE=n` in `config/flatcat.conf`.
 
 ## Status indicators
 
