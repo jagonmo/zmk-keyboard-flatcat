@@ -7,3 +7,6 @@ include:
   - board: nice_nano//zmk
     shield: flatcat_right
     artifact-name: flatcat-split-right
+  - board: nice_nano//zmk
+    shield: settings_reset
+    artifact-name: settings-reset
