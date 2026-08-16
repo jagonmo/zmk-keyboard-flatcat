@@ -1,7 +1,10 @@
 # FlatCat
 
 ZMK firmware for the **FlatCat** — a 79-key unibody keyboard with per-key RGB,
-powered by a Holyiot 18010 (nRF52840), but uses configurations of nice!nano v2.
+powered by a nice!nano v2 (nRF52840).
+
+This repository is both a **ZMK keyboard module** (it defines the `flatcat`
+shield) and a **zmk-config** (it builds the firmware via GitHub Actions).
 
 ## Features
 
