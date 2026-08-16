@@ -1,136 +1,79 @@
-# FlatCat
+# FlatCat Split (test branch)
 
-ZMK firmware for the **FlatCat** — a 79-key unibody keyboard with per-key RGB,
-powered by a nice!nano v2 (nRF52840).
+Two identical FlatCat PCBs used as one 158-key split keyboard.
 
-This repository is both a **ZMK keyboard module** (it defines the `flatcat`
-shield) and a **zmk-config** (it builds the firmware via GitHub Actions).
+| | Left | Right |
+|---|---|---|
+| Role | Central | Peripheral |
+| Keys | 79 (positions 0-78) | 79 (positions 0-78, local) |
+| Visual columns | 0-13 | 14-27 |
+| LEDs | 79 | 79 |
+| Host link, Studio, overlays | ✅ | — |
 
-## Features
-
-- 79 keys, 6×14 matrix
-- **Per-key RGB** — 36 effects via [zmk-pro-rgb](https://github.com/jagonmo/zmk-pro-rgb)
-- Bluetooth with 5 device profiles + USB
-- Status indicators: caps lock, Bluetooth profile, output mode, battery
-- Random effect and colour every time the keyboard wakes from idle
-- **ZMK Studio** support — edit the keymap live over USB
-- Battery reporting
-
-## Building
-
-Push to GitHub — the Actions workflow builds `flatcat.uf2` automatically.
-Download it from the run's artifacts and flash it to your nice!nano.
-
-## RGB controls (Lower layer)
-
-| Command    | Action          |
-|------------|-----------------|
-| `RGBP_TOG` | Toggle on/off   |
-| `RGBP_EFF` | Next effect     |
-| `RGBP_EFR` | Previous effect |
-| `RGBP_HUI` | Hue up          |
-| `RGBP_HUD` | Hue down        |
-| `RGBP_BRI` | Brightness up   |
-| `RGBP_BRD` | Brightness down |
-| `RGBP_SPI` | Speed up        |
-| `RGBP_SPD` | Speed down      |
-
-## ZMK Studio
-
-The firmware is built with [ZMK Studio](https://zmk.dev/docs/features/studio)
-support, so you can rebind keys live over USB without recompiling.
-
-1. Connect the keyboard by USB.
-2. Open [my.zmk.dev](https://my.zmk.dev) in a Chromium-based browser.
-3. Studio starts locked. Press **LOWER + LSHIFT** to unlock, then edit away.
-
-The unlock key is bound to `&studio_unlock` on the Lower layer. To skip the
-lock entirely, set `CONFIG_ZMK_STUDIO_LOCKING=n` in `config/flatcat.conf`.
-
-## Random on wake
-
-Every time the keyboard wakes from idle it jumps to a random effect, so the
-lighting is different each time you sit down. Single-colour effects also get
-a random hue; rainbow effects keep their own palette.
-
-Turn it off with `CONFIG_RGB_PRO_RANDOM_ON_WAKE=n` in `config/flatcat.conf`.
-
-## Status indicators
-
-Indicators are drawn on top of whatever RGB effect is running and always show
-at full brightness, so they stay readable even with the effects dimmed down.
-
-### Caps lock — always visible
-
-The **CAPS** key blinks green once per second while caps lock is active.
-
-### Output and Bluetooth — hold **LOWER**
-
-The second row doubles as a Bluetooth dashboard while the Lower layer is held:
-
-| Key   | Meaning              | Colour                                 |
-|-------|----------------------|----------------------------------------|
-| `` ` `` | Output mode        | Solid blue = BLE · Solid red = USB     |
-| `1`–`5` | Profiles 1–5       | See below                              |
-
-The **active** profile shows its live state:
-
-| State                        | Colour           |
-|------------------------------|------------------|
-| Connected                    | Solid blue       |
-| Paired, currently disconnected | Blinking blue  |
-| No device paired             | Blinking green   |
-| Not the active profile       | Dim white        |
-
-> Profiles other than the active one stay dim: ZMK keeps its profile table
-> private to `app/src/ble.c`, so a module can only read the active profile's
-> state.
-
-### Battery — hold **LOWER**
-
-**ESC F1 F2 F3** form a four-segment battery gauge. The bar fills in
-proportion to the charge and its colour sweeps from red when empty to green
-when full.
-
-## Layout
+## Files
 
 ```
-ESC  F1  F2  F3  F4  F5  F6  F7  F8  F9  F10 F11 F12 PSCRN
-`    1   2   3   4   5   6   7   8   9   0   -   =   DEL
-TAB  Q   W   E   R   T   Y   U   I   O   P   [   ]   BKSP
-CAPS A   S   D   F   G   H   J   K   L   ;   '   \   ENTER
-LSFT #   Z   X   C   V   B   N   M   ,   .   /   UP  RSFT
-LCTL LGUI LALT      SPACE          RALT LEFT DOWN RGHT LOWER
+boards/shields/flatcat_split/
+├── flatcat_split.dtsi      shared: matrix, LED strip, behaviour, battery
+├── flatcat_left.overlay    central: 158-key transform + physical layout
+├── flatcat_right.overlay   peripheral: includes the dtsi only
+├── flatcat.keymap          158 bindings per layer (shared base name)
+├── Kconfig.shield / .defconfig
+└── flatcat_split.zmk.yml
+config/
+├── flatcat.conf            shared by both halves (base name)
+├── flatcat_left.conf       central: Studio + overlays
+├── flatcat_right.conf      peripheral: nothing extra
+├── rgb_pro_led_map.h       per-side LED map
+└── west.yml
 ```
 
-## Tweaking the indicators
+## How the RGB stays in sync
 
-Everything is set in `config/flatcat.conf` using **key positions** (the order
-keys appear in the keymap), so you can move an indicator by changing a number:
+`&rgb_pro` is declared `BEHAVIOR_LOCALITY_GLOBAL`, so ZMK forwards every
+command to the central *and* the peripheral. Toggle, effect, hue, brightness
+and speed apply to both halves at once.
 
-```ini
-CONFIG_RGB_PRO_CAPS_KEY=42          # CAPS
-CONFIG_RGB_PRO_STATUS_OUT_KEY=14    # `
-CONFIG_RGB_PRO_STATUS_BT_KEY_BASE=15  # 1 .. 5
-CONFIG_RGB_PRO_BATTERY_KEY_START=0    # ESC
-CONFIG_RGB_PRO_BATTERY_KEY_COUNT=4    # ESC F1 F2 F3
-```
+Both halves share the same PCB, so `key_to_led[]` is identical. Only
+`key_col[]` differs: the right half is shifted to columns 14-27 so a
+left-to-right sweep runs across the whole keyboard instead of restarting in
+the middle.
 
-Set `CONFIG_RGB_PRO_STATUS_OVERLAY=n` or `CONFIG_RGB_PRO_BATTERY_INDICATOR=n`
-to turn an indicator off. See the
-[zmk-pro-rgb docs](https://github.com/jagonmo/zmk-pro-rgb) for the full list.
+## File naming
 
-## Using the FlatCat shield in your own config
+ZMK strips the `_left` / `_right` suffix to locate shared files, so the
+common config and keymap must use the **base** name `flatcat`:
 
-Add this repo as a module in your `config/west.yml`:
+| File | Applies to |
+|------|-----------|
+| `flatcat.conf` | both halves |
+| `flatcat.keymap` | both halves (only the central uses it) |
+| `flatcat_left.conf` / `flatcat_right.conf` | that half only |
+| `flatcat_left.overlay` / `flatcat_right.overlay` | that half only |
 
-```yaml
-  projects:
-    - name: zmk-keyboard-flatcat
-      remote: jagonmo
-      revision: main
-```
+> If the unibody `flatcat.conf` from the main branch is left in place, it
+> gets merged into the peripheral build too and leaks `CONFIG_ZMK_STUDIO=y`
+> onto a half that has no physical layout, which fails the build.
 
-## License
+## Pairing
 
-MIT
+Flash `flatcat-split-left.uf2` to the left half and
+`flatcat-split-right.uf2` to the right. If they were previously paired to
+anything else, flash `settings_reset` to both first, then power both on
+together.
+
+## Behaviour node name
+
+The `&rgb_pro` node is named `rgbpro` (6 chars) on purpose. ZMK identifies
+behaviours by node name when forwarding them to a peripheral, and names longer
+than 8 characters silently fail to run there — the peripheral would stay stuck
+on the first effect while the central changes.
+
+## Known limitations
+
+- **Reactive effects are per-half.** Each side only sees its own key presses,
+  so a splash started on the left does not spread to the right.
+- **Animations drift.** Each half advances its own frame counter; toggling
+  the effect re-aligns them.
+- **Random on wake is off.** Halves idle independently and would roll
+  different effects, so the option is unavailable on splits.
