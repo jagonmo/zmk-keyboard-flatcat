@@ -1,0 +1,16 @@
+if SHIELD_FLATCAT_LEFT
+
+config ZMK_KEYBOARD_NAME
+    default "FlatCat Split"
+
+config ZMK_SPLIT_ROLE_CENTRAL
+    default y
+
+endif
+
+if SHIELD_FLATCAT_LEFT || SHIELD_FLATCAT_RIGHT
+
+config ZMK_SPLIT
+    default y
+
+endif

@@ -1,0 +1,12 @@
+file_format: "1"
+id: flatcat_split
+name: FlatCat Split
+type: shield
+url: https://github.com/jagonmo/zmk-keyboard-flatcat
+requires: [pro_micro]
+features:
+  - keys
+  - underglow
+siblings:
+  - flatcat_left
+  - flatcat_right

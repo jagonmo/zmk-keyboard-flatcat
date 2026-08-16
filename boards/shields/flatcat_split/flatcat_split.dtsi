@@ -1,0 +1,101 @@
+#include <dt-bindings/zmk/matrix_transform.h>
+#include <physical_layouts.dtsi>
+#include <dt-bindings/led/led.h>
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+/ {
+    chosen {
+        zmk,kscan     = &kscan0;
+        zmk,underglow = &led_strip;
+        zmk,battery   = &vbatt;
+    };
+
+    /* GPIO regulator powering the WS2812 strip (P0.29) — same on both halves. */
+    rgb_pro_pwr: rgb_pro_pwr {
+        compatible     = "regulator-fixed";
+        regulator-name = "rgb_pro_pwr";
+        enable-gpios   = <&gpio0 29 GPIO_ACTIVE_LOW>;
+        regulator-boot-on;
+    };
+
+    kscan0: kscan {
+        compatible      = "zmk,kscan-gpio-matrix";
+        diode-direction = "col2row";
+        wakeup-source;
+
+        row-gpios
+            = <&gpio0 5  (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+            , <&gpio0 7  (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+            , <&gpio1 9  (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+            , <&gpio0 12 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+            , <&gpio0 23 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+            , <&gpio0 21 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+            ;
+
+        col-gpios
+            = <&gpio1 6  GPIO_ACTIVE_HIGH>
+            , <&gpio1 4  GPIO_ACTIVE_HIGH>
+            , <&gpio1 2  GPIO_ACTIVE_HIGH>
+            , <&gpio1 1  GPIO_ACTIVE_HIGH>
+            , <&gpio1 3  GPIO_ACTIVE_HIGH>
+            , <&gpio1 0  GPIO_ACTIVE_HIGH>
+            , <&gpio0 22 GPIO_ACTIVE_HIGH>
+            , <&gpio0 28 GPIO_ACTIVE_HIGH>
+            , <&gpio0 2  GPIO_ACTIVE_HIGH>
+            , <&gpio0 3  GPIO_ACTIVE_HIGH>
+            , <&gpio1 15 GPIO_ACTIVE_HIGH>
+            , <&gpio1 13 GPIO_ACTIVE_HIGH>
+            , <&gpio1 10 GPIO_ACTIVE_HIGH>
+            , <&gpio1 11 GPIO_ACTIVE_HIGH>
+            ;
+    };
+
+    leds {
+        compatible = "gpio-leds";
+        blue_led: led_0 {
+            gpios = <&gpio0 10 GPIO_ACTIVE_LOW>;
+            label = "Blue LED";
+        };
+    };
+
+    behaviors {
+        rgb_pro: behavior_rgb_pro {
+            compatible     = "zmk,behavior-rgb-pro";
+            #binding-cells = <2>;
+        };
+    };
+
+    vbatt: vbatt {
+        compatible  = "zmk,battery-voltage-divider";
+        io-channels = <&adc 2>;
+        output-ohms = <2000000>;
+        full-ohms   = <(2000000 + 806000)>;
+    };
+};
+
+&pinctrl {
+    spi3_default: spi3_default {
+        group1 { psels = <NRF_PSEL(SPIM_MOSI, 0, 19)>; };
+    };
+    spi3_sleep: spi3_sleep {
+        group1 { psels = <NRF_PSEL(SPIM_MOSI, 0, 19)>; low-power-enable; };
+    };
+};
+
+&spi3 {
+    compatible    = "nordic,nrf-spim";
+    status        = "okay";
+    pinctrl-0     = <&spi3_default>;
+    pinctrl-1     = <&spi3_sleep>;
+    pinctrl-names = "default", "sleep";
+
+    led_strip: ws2812@0 {
+        compatible        = "worldsemi,ws2812-spi";
+        reg               = <0>;
+        spi-max-frequency = <4000000>;
+        chain-length      = <79>;
+        spi-one-frame     = <0x70>;
+        spi-zero-frame    = <0x40>;
+        color-mapping     = <LED_COLOR_ID_GREEN LED_COLOR_ID_RED LED_COLOR_ID_BLUE>;
+    };
+};

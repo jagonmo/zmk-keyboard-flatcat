@@ -1,0 +1,4 @@
+#include "flatcat_split.dtsi"
+
+/* Peripheral half: no matrix transform or physical layout — the central
+   owns the keymap. Only the local matrix, LEDs and battery are needed. */
