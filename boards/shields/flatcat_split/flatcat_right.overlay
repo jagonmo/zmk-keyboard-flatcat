@@ -1,4 +1,22 @@
 #include "flatcat_split.dtsi"
 
-/* Peripheral half: no matrix transform or physical layout — the central
-   owns the keymap. Only the local matrix, LEDs and battery are needed. */
+/* Peripheral half.
+ *
+ * It scans its own 6x14 matrix, so without an offset it would report raw
+ * positions (row * 14 + col) that land on the left half's keys. col-offset
+ * shifts its local columns into 14-27 of the full 28-column transform.
+ *
+ * The central selects its layout through zmk,physical-layout (required by
+ * ZMK Studio); the peripheral has no keymap, so it points straight at the
+ * transform instead.
+ */
+
+/ {
+    chosen {
+        zmk,matrix-transform = &default_transform;
+    };
+};
+
+&default_transform {
+    col-offset = <14>;
+};

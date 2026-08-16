@@ -1,9 +1,6 @@
 ---
 include:
   - board: nice_nano//zmk
-    shield: flatcat_left
+    shield: flatcat
     snippet: studio-rpc-usb-uart
-    artifact-name: flatcat-split-left
-  - board: nice_nano//zmk
-    shield: flatcat_right
-    artifact-name: flatcat-split-right
+    artifact-name: flatcat

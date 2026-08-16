@@ -164,7 +164,7 @@
     };
 
     behaviors {
-        rgb_pro: behavior_rgb_pro {
+        rgb_pro: rgbpro {
             compatible      = "zmk,behavior-rgb-pro";
             #binding-cells  = <2>;
         };
