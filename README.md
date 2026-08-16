@@ -77,3 +77,10 @@ on the first effect while the central changes.
   the effect re-aligns them.
 - **Random on wake is off.** Halves idle independently and would roll
   different effects, so the option is unavailable on splits.
+- **The peripheral never idles.** Each half tracks activity separately, so
+  typing only on the left would let the right blank its strip and miss any
+  effect changes made meanwhile. `flatcat_right.conf` disables idle blanking
+  to keep both halves in step; that costs battery on the right.
+- **Only 118 of 158 keys.** ZMK's split protocol carries key positions in a
+  128-bit map, so anything at position 128 or above never reaches the central.
+  The right half is therefore limited to its first 7 columns (39 keys).
