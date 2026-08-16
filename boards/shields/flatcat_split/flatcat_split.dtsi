@@ -54,7 +54,7 @@
        its local matrix into columns 14-27 with col-offset. */
     default_transform: keymap_transform0 {
         compatible = "zmk,matrix-transform";
-        columns = <28>;
+        columns = <21>;
         rows    = <6>;
 
         map = <
@@ -64,12 +64,12 @@
     RC(3,0) RC(3,1) RC(3,2) RC(3,3) RC(3,4) RC(3,5) RC(3,6) RC(3,7) RC(3,8) RC(3,9) RC(3,10) RC(3,11) RC(3,12) RC(3,13)
     RC(4,0) RC(4,1) RC(4,2) RC(4,3) RC(4,4) RC(4,5) RC(4,6) RC(4,7) RC(4,8) RC(4,9) RC(4,10) RC(4,11) RC(4,12) RC(4,13)
     RC(5,0) RC(5,1) RC(5,2) RC(5,6) RC(5,9) RC(5,10) RC(5,11) RC(5,12) RC(5,13)
-    RC(0,14) RC(0,15) RC(0,16) RC(0,17) RC(0,18) RC(0,19) RC(0,20) RC(0,21) RC(0,22) RC(0,23) RC(0,24) RC(0,25) RC(0,26) RC(0,27)
-    RC(1,14) RC(1,15) RC(1,16) RC(1,17) RC(1,18) RC(1,19) RC(1,20) RC(1,21) RC(1,22) RC(1,23) RC(1,24) RC(1,25) RC(1,26) RC(1,27)
-    RC(2,14) RC(2,15) RC(2,16) RC(2,17) RC(2,18) RC(2,19) RC(2,20) RC(2,21) RC(2,22) RC(2,23) RC(2,24) RC(2,25) RC(2,26) RC(2,27)
-    RC(3,14) RC(3,15) RC(3,16) RC(3,17) RC(3,18) RC(3,19) RC(3,20) RC(3,21) RC(3,22) RC(3,23) RC(3,24) RC(3,25) RC(3,26) RC(3,27)
-    RC(4,14) RC(4,15) RC(4,16) RC(4,17) RC(4,18) RC(4,19) RC(4,20) RC(4,21) RC(4,22) RC(4,23) RC(4,24) RC(4,25) RC(4,26) RC(4,27)
-    RC(5,14) RC(5,15) RC(5,16) RC(5,20) RC(5,23) RC(5,24) RC(5,25) RC(5,26) RC(5,27)
+    RC(0,14) RC(0,15) RC(0,16) RC(0,17) RC(0,18) RC(0,19) RC(0,20)
+    RC(1,14) RC(1,15) RC(1,16) RC(1,17) RC(1,18) RC(1,19) RC(1,20)
+    RC(2,14) RC(2,15) RC(2,16) RC(2,17) RC(2,18) RC(2,19) RC(2,20)
+    RC(3,14) RC(3,15) RC(3,16) RC(3,17) RC(3,18) RC(3,19) RC(3,20)
+    RC(4,14) RC(4,15) RC(4,16) RC(4,17) RC(4,18) RC(4,19) RC(4,20)
+    RC(5,14) RC(5,15) RC(5,16) RC(5,20)
         >;
     };
 
