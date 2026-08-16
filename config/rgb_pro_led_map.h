@@ -28,14 +28,31 @@
     k70, k71, k72, k73, k74, k75, k76, k77, k78                              \
 }
 
-/* Same PCB on both halves, so the chain order is identical. */
+/* Both halves carry the full 79-LED chain and the same serpentine wiring,
+   so key_to_led is identical. Only the visual columns differ: the right half
+   continues at column 14 so left-to-right effects sweep across both boards.
+
+   Note this table covers all 79 LED positions on both sides. The keymap only
+   wires up the right half's first 7 columns — that limit is about how many
+   key positions ZMK's split protocol can carry, not about LEDs. Every LED
+   still animates. */
+
 const uint8_t key_to_led[] = LED_LAYOUT(
-    22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10,  9,
-    23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35,  8,
-    48, 47, 46, 45, 44, 43, 42, 41, 40, 39, 38, 37, 36,  7,
-    49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61,  6,
-    74, 73, 72, 71, 70, 69, 68, 67, 66, 65, 64, 63, 62,  5,
-    75, 76, 77,         78,          0,  1,  2,  3,  4
+     22,  21,  20,  19,  18,  17,  16,  15,  14,  13,  12,  11,  10,   9,
+     23,  24,  25,  26,  27,  28,  29,  30,  31,  32,  33,  34,  35,   8,
+     48,  47,  46,  45,  44,  43,  42,  41,  40,  39,  38,  37,  36,   7,
+     49,  50,  51,  52,  53,  54,  55,  56,  57,  58,  59,  60,  61,   6,
+     74,  73,  72,  71,  70,  69,  68,  67,  66,  65,  64,  63,  62,   5,
+     75,  76,  77,  78,   0,   1,   2,   3,   4
+);
+
+const uint8_t key_row[] = LED_LAYOUT(
+      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+      1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,
+      2,   2,   2,   2,   2,   2,   2,   2,   2,   2,   2,   2,   2,   2,
+      3,   3,   3,   3,   3,   3,   3,   3,   3,   3,   3,   3,   3,   3,
+      4,   4,   4,   4,   4,   4,   4,   4,   4,   4,   4,   4,   4,   4,
+      5,   5,   5,   5,   5,   5,   5,   5,   5
 );
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
@@ -46,26 +63,16 @@ const uint8_t key_col[] = LED_LAYOUT(
       0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,  13,
       0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,  13,
       0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,  13,
-      1,   2,   3,            6,    9,   10,   11,   12,   13
+      0,   1,   2,   6,   9,  10,  11,  12,  13
 );
 #else
-/* Right half: columns 14-27, so effects continue across the gap */
+/* Right half: columns 14-27 */
 const uint8_t key_col[] = LED_LAYOUT(
      14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,
      14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,
      14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,
      14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,
      14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,
-     15,  16,  17,           20,   23,   24,   25,   26,   27
+     14,  15,  16,  20,  23,  24,  25,  26,  27
 );
 #endif
-
-/* Rows are the same on both halves. */
-const uint8_t key_row[] = LED_LAYOUT(
-      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
-      1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,
-      2,   2,   2,   2,   2,   2,   2,   2,   2,   2,   2,   2,   2,   2,
-      3,   3,   3,   3,   3,   3,   3,   3,   3,   3,   3,   3,   3,   3,
-      4,   4,   4,   4,   4,   4,   4,   4,   4,   4,   4,   4,   4,   4,
-      5,   5,   5,   5,   5,   5,   5,   5,   5
-);
