@@ -11,6 +11,6 @@ manifest:
       import: app/west.yml
     - name: zmk-pro-rgb
       remote: jagonmo
-      revision: main
+      revision: split_tests
   self:
     path: config
