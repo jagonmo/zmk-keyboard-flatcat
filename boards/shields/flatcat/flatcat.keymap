@@ -16,6 +16,8 @@
 #define RGBP_BRD 8
 #define RGBP_SPI 9
 #define RGBP_SPD 10
+#define RGBP_RND 11   /* random effect now */
+#define RGBP_DIR 12   /* reverse direction */
 
 #define DEFAULT 0
 #define LOWER   1
@@ -37,12 +39,12 @@
 
         lower_layer {
             bindings = <
-    &trans       &trans       &trans       &kp C_AL_CALC &kp C_MUTE   &kp C_VOL_DN &kp C_VOL_UP &kp C_PREV &kp C_PAUSE &kp C_NEXT &kp PG_UP  &kp PG_DN           &kp HOME            &kp END
-    &out OUT_TOG &bt BT_SEL 0 &bt BT_SEL 1 &bt BT_SEL 2  &bt BT_SEL 3 &bt BT_SEL 4 &trans       &trans     &trans      &trans     &bt BT_CLR &rgb_pro RGBP_SPD 0 &rgb_pro RGBP_SPI 0 &trans
-    &trans       &trans       &trans       &trans        &trans       &trans       &trans       &trans     &trans      &trans     &trans     &trans              &trans              &trans
-    &trans       &trans       &kp K_SLEEP  &trans        &trans       &trans       &trans       &trans     &trans      &trans     &trans     &trans              &trans              &trans
-    &studio_unlock &trans     &trans       &trans        &trans       &trans       &trans       &trans     &trans      &trans     &trans     &rgb_pro RGBP_EFR 0 &rgb_pro RGBP_BRI 0 &rgb_pro RGBP_EFF 0
-    &bootloader  &trans       &sys_reset                              &rgb_pro RGBP_TOG 0                             &trans     &rgb_pro RGBP_HUD 0 &rgb_pro RGBP_BRD 0 &rgb_pro RGBP_HUI 0 &trans
+    &trans       &trans       &trans       &kp C_AL_CALC &kp C_MUTE   &kp C_VOL_DN &kp C_VOL_UP &kp C_PREV &kp C_PAUSE &kp C_NEXT &kp PG_UP           &kp PG_DN           &kp HOME            &kp END
+    &out OUT_TOG &bt BT_SEL 0 &bt BT_SEL 1 &bt BT_SEL 2  &bt BT_SEL 3 &bt BT_SEL 4 &trans       &trans     &trans      &trans     &bt BT_CLR          &rgb_pro RGBP_SPD 0 &rgb_pro RGBP_SPI 0 &trans
+    &trans       &trans       &trans       &trans        &trans       &trans       &trans       &trans     &trans      &trans     &trans              &trans              &trans              &trans
+    &trans       &trans       &kp K_SLEEP  &trans        &trans       &trans       &trans       &trans     &trans      &trans     &trans              &rgb_pro RGBP_DIR 0 &rgb_pro RGBP_RND 0 &trans
+    &studio_unlock &trans     &trans       &trans        &trans       &trans       &trans       &trans     &trans      &trans     &trans              &rgb_pro RGBP_EFR 0 &rgb_pro RGBP_BRI 0 &rgb_pro RGBP_EFF 0
+    &bootloader  &trans       &sys_reset                              &rgb_pro RGBP_TOG 0                              &trans     &rgb_pro RGBP_HUD 0 &rgb_pro RGBP_BRD 0 &rgb_pro RGBP_HUI 0 &trans
             >;
         };
     };
