@@ -1,0 +1,24 @@
+if SHIELD_FLATCATDONGLE
+
+# Max 16 characters
+config ZMK_KEYBOARD_NAME
+    default "FlatCat"
+
+config ZMK_SPLIT_ROLE_CENTRAL
+    default y
+
+config ZMK_SPLIT
+    default y
+
+# One peripheral: the FlatCat keyboard itself.
+config ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS
+    default 1
+
+# ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS + the default 5 Bluetooth host profiles.
+config BT_MAX_CONN
+    default 6
+
+config BT_MAX_PAIRED
+    default 6
+
+endif

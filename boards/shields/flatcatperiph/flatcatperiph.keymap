@@ -1,0 +1,7 @@
+/*
+ * A peripheral still needs the keymap file: it pulls in <behaviors.dtsi>, so
+ * behaviors the dongle forwards by name (&bootloader, &sys_reset, &rgb_pro)
+ * exist on this side. Same file the standalone keyboard uses.
+ */
+
+#include "../flatcat/flatcat.keymap"

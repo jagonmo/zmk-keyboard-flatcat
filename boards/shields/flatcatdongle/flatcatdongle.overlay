@@ -1,0 +1,24 @@
+/*
+ * FlatCat dongle — central with no keys.
+ *
+ * The dongle has no matrix of its own (mock kscan), but it must know the
+ * keyboard's matrix transform and physical layout to turn the key positions
+ * it receives from the peripheral into keymap bindings. Both come from the
+ * same file the keyboard itself uses, so node names and contents always match.
+ */
+
+#include "../flatcat/flatcat-layouts.dtsi"
+
+/ {
+    chosen {
+        zmk,kscan           = &mock_kscan;
+        zmk,physical-layout = &physical_layout0;
+    };
+
+    mock_kscan: mock_kscan_0 {
+        compatible = "zmk,kscan-mock";
+        columns    = <0>;
+        rows       = <0>;
+        events     = <0>;
+    };
+};

@@ -1,0 +1,7 @@
+if SHIELD_FLATCATPERIPH
+
+# Peripheral: ZMK_SPLIT_ROLE_CENTRAL stays at its default (n).
+config ZMK_SPLIT
+    default y
+
+endif

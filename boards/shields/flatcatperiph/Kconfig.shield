@@ -1,0 +1,3 @@
+# No whitespace after the comma or in the shield name!
+config SHIELD_FLATCATPERIPH
+    def_bool $(shields_list_contains,flatcatperiph)

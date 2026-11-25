@@ -1,6 +1,24 @@
 ---
 include:
+  # Standalone keyboard (unchanged).
   - board: nice_nano//zmk
     shield: flatcat
     snippet: studio-rpc-usb-uart
     artifact-name: flatcat
+
+  # Dongle mode — flash all three, in the order given in the README/notes:
+  #   1. settings-reset on the keyboard AND on the dongle
+  #   2. flatcat-periph on the keyboard
+  #   3. flatcat-dongle on the nice!nano v2
+  - board: nice_nano//zmk
+    shield: flatcatdongle
+    snippet: studio-rpc-usb-uart
+    artifact-name: flatcat-dongle
+
+  - board: nice_nano//zmk
+    shield: flatcatperiph
+    artifact-name: flatcat-periph
+
+  - board: nice_nano//zmk
+    shield: settings_reset
+    artifact-name: settings-reset

@@ -1,0 +1,9 @@
+/*
+ * FlatCat keyboard as a split peripheral for the dongle.
+ *
+ * Same hardware description as the standalone `flatcat` shield. Kept as a
+ * separate shield because the standalone config/flatcat.conf is not valid for
+ * a peripheral (see config/flatcatperiph.conf).
+ */
+
+#include "../flatcat/flatcat.overlay"
