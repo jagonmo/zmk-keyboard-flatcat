@@ -21,4 +21,14 @@
         rows       = <0>;
         events     = <0>;
     };
+
+    /* No LEDs here. The node exists so the keymap's &rgb_pro bindings resolve
+       and ZMK forwards them to the keyboard BY DEVICE NAME, so the node name
+       (rgbpro) must match the one in ../flatcat/flatcat.overlay. */
+    behaviors {
+        rgb_pro: rgbpro {
+            compatible      = "zmk,behavior-rgb-pro";
+            #binding-cells  = <2>;
+        };
+    };
 };
