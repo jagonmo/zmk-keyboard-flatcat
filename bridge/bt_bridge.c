@@ -698,10 +698,31 @@ static void security_changed_cb(struct bt_conn *conn, bt_security_t level,
     }
 }
 
+static bool le_param_req_cb(struct bt_conn *conn, struct bt_le_conn_param *param) {
+    if (conn != peer_conn) {
+        return true;
+    }
+    LOG_DBG("keyboard asks: interval %d-%d, latency %d, timeout %d", param->interval_min,
+            param->interval_max, param->latency, param->timeout);
+    return bridge_lamp_adjust_params(param);
+}
+
+static void le_param_updated_cb(struct bt_conn *conn, uint16_t interval, uint16_t latency,
+                                uint16_t timeout) {
+    if (conn != peer_conn) {
+        return;
+    }
+    /* interval is in 1.25 ms units */
+    LOG_INF("link: interval %d.%02d ms, peripheral latency %d", interval * 5 / 4,
+            (interval * 125) % 100, latency);
+}
+
 BT_CONN_CB_DEFINE(bridge_conn_cb) = {
     .connected = connected_cb,
     .disconnected = disconnected_cb,
     .security_changed = security_changed_cb,
+    .le_param_req = le_param_req_cb,
+    .le_param_updated = le_param_updated_cb,
 };
 
 static void pairing_complete_cb(struct bt_conn *conn, bool bondedp) {

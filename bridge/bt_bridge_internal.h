@@ -18,7 +18,14 @@ extern struct k_work_q bridge_tx_q;
 void bridge_lamp_start(struct bt_conn *conn);
 /* The keyboard disconnected. */
 void bridge_lamp_stop(void);
+/* The keyboard asks for new connection parameters: remember them, and keep
+ * the latency at 0 while Windows drives the lamps. Returns true (accept). */
+bool bridge_lamp_adjust_params(struct bt_le_conn_param *param);
 #else
 static inline void bridge_lamp_start(struct bt_conn *conn) { ARG_UNUSED(conn); }
 static inline void bridge_lamp_stop(void) {}
+static inline bool bridge_lamp_adjust_params(struct bt_le_conn_param *param) {
+    ARG_UNUSED(param);
+    return true;
+}
 #endif

@@ -83,6 +83,18 @@ static struct rgbp_lr_rgb sent[LAMP_COUNT]; /* what the keyboard already has */
 static bool sent_valid;
 static int sent_autonomous = -1;      /* -1: keyboard state unknown */
 
+/* ---- Connection parameters ----
+ * The keyboard asks (5 s after connecting) for a peripheral latency of 30: it
+ * may then sleep through 30 connection events whenever it has nothing to send.
+ * Keystrokes do not care, but data the dongle sends only arrives when the
+ * keyboard wakes up, every 230-465 ms: 2-4 frames a second. While Windows
+ * drives the lamps the dongle asks for latency 0 instead, and gives the
+ * keyboard its own wish back when Windows lets go (to save its battery). */
+static atomic_t streaming;            /* Windows in host mode (read in BT context) */
+static struct k_spinlock pref_lock;
+static struct bt_le_conn_param peer_pref = BT_LE_CONN_PARAM_INIT(6, 12, 30, 400);
+static int lowlat_applied = -1;       /* bridge_tx_q only; -1: not set on this link */
+
 static struct k_work_delayable tx_work;
 static struct k_work start_work;
 
@@ -214,6 +226,7 @@ static int set_control(const uint8_t *data, int32_t len) {
     bool changed = (autonomous != now_autonomous);
     autonomous = now_autonomous;
     k_spin_unlock(&la_lock, key);
+    atomic_set(&streaming, !now_autonomous);
 
     if (changed) {
         LOG_INF("LampArray: %s mode", now_autonomous ? "autonomous" : "host");
@@ -301,6 +314,7 @@ static int lamp_usb_listener(const zmk_event_t *eh) {
 
     k_spinlock_key_t key = k_spin_lock(&la_lock);
     autonomous = true;
+    atomic_set(&streaming, 0);
     req_lamp_id = 0;
     memset(staging, 0, sizeof(staging));
     memset(active, 0, sizeof(active));
@@ -325,10 +339,32 @@ static void tx_handler(struct k_work *work) {
         atomic_set(&ready, 0);
         sent_valid = false;
         sent_autonomous = -1;
+        lowlat_applied = -1;
         return;
     }
     if (!atomic_get(&ready) || !lamp_conn) {
         return;
+    }
+
+    /* Latency first: frames sent while it is still 30 crawl. */
+    bool want_low = atomic_get(&streaming);
+    if (lowlat_applied != (int)want_low) {
+        k_spinlock_key_t pk = k_spin_lock(&pref_lock);
+        struct bt_le_conn_param p = peer_pref;
+        k_spin_unlock(&pref_lock, pk);
+        if (want_low) {
+            p.latency = 0;
+        }
+
+        int err = bt_conn_le_param_update(lamp_conn, &p);
+        if (err && err != -EALREADY) {
+            LOG_WRN("connection update failed (%d), retrying", err);
+            k_work_reschedule_for_queue(&bridge_tx_q, &tx_work, K_MSEC(500));
+        } else {
+            lowlat_applied = want_low;
+            LOG_INF("Dynamic Lighting %s: peripheral latency %d", want_low ? "active" : "idle",
+                    p.latency);
+        }
     }
 
     struct rgbp_lr_rgb cur[LAMP_COUNT];
@@ -490,6 +526,7 @@ static void start_handler(struct k_work *work) {
     atomic_set(&ready, 0);
     sent_valid = false;
     sent_autonomous = -1;
+    lowlat_applied = -1;
 
     /* Larger writes: up to 19 lamps each instead of 5. */
     mtu_params.func = mtu_cb;
@@ -508,6 +545,17 @@ void bridge_lamp_start(struct bt_conn *conn) {
 
     atomic_set(&link_up, 1);
     k_work_submit_to_queue(&bridge_tx_q, &start_work);
+}
+
+bool bridge_lamp_adjust_params(struct bt_le_conn_param *param) {
+    k_spinlock_key_t key = k_spin_lock(&pref_lock);
+    peer_pref = *param;
+    k_spin_unlock(&pref_lock, key);
+
+    if (atomic_get(&streaming)) {
+        param->latency = 0;
+    }
+    return true;
 }
 
 void bridge_lamp_stop(void) {
