@@ -1,4 +1,6 @@
 name: zmk-keyboard-flatcat
 build:
+  cmake: .
+  kconfig: Kconfig
   settings:
     board_root: .

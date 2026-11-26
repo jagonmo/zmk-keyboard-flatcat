@@ -4,3 +4,21 @@ include:
     shield: flatcat
     snippet: studio-rpc-usb-uart
     artifact-name: flatcat
+
+  # Receiver dongle (nice!nano v2): Bluetooth -> USB bridge. The keyboard keeps
+  # the firmware above; pair the dongle to one of its Bluetooth profiles.
+  - board: nice_nano//zmk
+    shield: flatcatbridge
+    artifact-name: flatcat-bridge
+
+  # Same dongle with USB serial logging, for diagnosing pairing/connection.
+  - board: nice_nano//zmk
+    shield: flatcatbridge
+    snippet: zmk-usb-logging
+    cmake-args: -DCONFIG_ZMK_LOG_LEVEL_DBG=y
+    artifact-name: flatcat-bridge-debug
+
+  # Forgets the dongle's stored bond (flash on the dongle, then flatcat-bridge again).
+  - board: nice_nano//zmk
+    shield: settings_reset
+    artifact-name: settings-reset

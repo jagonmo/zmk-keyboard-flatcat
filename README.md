@@ -120,6 +120,42 @@ Set `CONFIG_RGB_PRO_STATUS_OVERLAY=n` or `CONFIG_RGB_PRO_BATTERY_INDICATOR=n`
 to turn an indicator off. See the
 [zmk-pro-rgb docs](https://github.com/jagonmo/zmk-pro-rgb) for the full list.
 
+## Receiver dongle (Bluetooth to USB)
+
+A nice!nano v2 can act as a USB receiver for the keyboard (`flatcat-bridge`).
+The keyboard keeps its normal firmware (`flatcat`): the dongle is just one more
+entry in its Bluetooth profile list, and the other profiles keep working with
+any other device.
+
+The dongle connects only to the keyboard and re-sends its keystrokes, media
+keys and caps lock state over USB. Lighting, overlays, layers and battery all
+run on the keyboard as usual.
+
+### Pairing (once)
+
+1. Flash `flatcat-bridge` on the nice!nano and plug it into the PC.
+2. On the keyboard, select a **free** Bluetooth profile (`LOWER` + one of the
+   profile keys; clear it with `BT_CLR` if it was used before).
+3. The dongle finds the keyboard by name ("FlatCat"), pairs and bonds. From then
+   on it reconnects to that keyboard only.
+
+To use the dongle, select its profile on the keyboard like any other device.
+
+### Start over
+
+Flash `settings-reset` on the dongle, then `flatcat-bridge` again, and clear the
+dongle's profile on the keyboard with `BT_CLR`.
+
+### Problems
+
+`flatcat-bridge-debug` is the same dongle with a USB serial log. Flash it, open
+the new serial port, reproduce the problem and keep the output: it shows each
+step (found, connected, secured, subscribed) and why one failed.
+
+Keyboard and dongle must be built with the same HID options (both use the
+defaults plus `CONFIG_ZMK_HID_INDICATORS=y`). If they differ, the log says so
+and those reports are dropped.
+
 ## Using the FlatCat shield in your own config
 
 Add this repo as a module in your `config/west.yml`:

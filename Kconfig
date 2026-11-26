@@ -1,0 +1,52 @@
+# BLE (HID over GATT) to USB bridge for the dongle. Off unless a shield turns it on.
+
+menuconfig ZMK_BT_BRIDGE
+    bool "BLE to USB bridge (receiver dongle)"
+    depends on ZMK_USB && !ZMK_BLE && !ZMK_SPLIT
+    select BT
+    select BT_CENTRAL
+    select BT_SMP
+    select BT_SMP_SC_PAIR_ONLY
+    select BT_GATT_CLIENT
+    select BT_SETTINGS
+    select SETTINGS
+    help
+      Makes this board a receiver: it connects over Bluetooth to one ZMK
+      keyboard and re-emits that keyboard's reports over USB. The keyboard is a
+      normal standalone ZMK keyboard; the dongle is one of its Bluetooth
+      profiles.
+
+      Needs ZMK_BLE=n: the dongle is not a Bluetooth keyboard itself. Keyboard
+      and dongle must be built with the same HID options so the report layouts
+      match.
+
+if ZMK_BT_BRIDGE
+
+config ZMK_BT_BRIDGE_PEER_NAME
+    string "Name prefix of the keyboard, used for the first pairing"
+    default "FlatCat"
+    help
+      Before the dongle is bonded it connects to the first device that
+      advertises the HID service and whose name starts with this. Leave empty
+      to accept any HID device. Once bonded, only the bonded keyboard is used.
+
+config ZMK_BT_BRIDGE_PEER_ADDR
+    string "Fixed address of the keyboard (optional)"
+    default ""
+    help
+      Restricts the dongle to one device, e.g. "AA:BB:CC:DD:EE:FF". Takes
+      priority over the name and over the bond. The address shows in the
+      debug log when the dongle finds the keyboard.
+
+config ZMK_BT_BRIDGE_CLEAR_BONDS_ON_START
+    bool "Forget the bonded keyboard at every start"
+    help
+      For pairing tests only: the dongle will pair again each time it starts.
+      The keyboard must have the same profile cleared.
+
+config ZMK_BT_BRIDGE_INIT_PRIORITY
+    int "Init priority"
+    default 95
+    range 0 99
+
+endif # ZMK_BT_BRIDGE

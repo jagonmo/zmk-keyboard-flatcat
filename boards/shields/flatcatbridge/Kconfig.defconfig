@@ -1,0 +1,14 @@
+if SHIELD_FLATCATBRIDGE
+
+# Shown by the PC as the USB product name. Max 16 characters.
+config ZMK_KEYBOARD_NAME
+    default "FlatCat Dongle"
+
+# One connection (the keyboard) and one bond.
+config BT_MAX_CONN
+    default 1
+
+config BT_MAX_PAIRED
+    default 1
+
+endif

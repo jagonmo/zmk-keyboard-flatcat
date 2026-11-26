@@ -1,0 +1,40 @@
+/*
+ * FlatCat receiver dongle.
+ *
+ * It has no keys: all key handling happens on the keyboard. ZMK still needs a
+ * keymap, so this is the smallest valid one: a mock matrix with one key.
+ */
+
+#include <dt-bindings/zmk/matrix_transform.h>
+#include <physical_layouts.dtsi>
+
+/ {
+    chosen {
+        zmk,kscan           = &mock_kscan;
+        zmk,physical-layout = &physical_layout0;
+    };
+
+    mock_kscan: mock_kscan_0 {
+        compatible = "zmk,kscan-mock";
+        columns    = <0>;
+        rows       = <0>;
+        events     = <0>;
+    };
+
+    default_transform: keymap_transform0 {
+        compatible = "zmk,matrix-transform";
+        columns    = <1>;
+        rows       = <1>;
+        map        = <RC(0,0)>;
+    };
+
+    physical_layout0: physical_layout_0 {
+        compatible   = "zmk,physical-layout";
+        display-name = "Receiver";
+        transform    = <&default_transform>;
+
+        keys  //                     w   h    x    y
+            = <&key_physical_attrs  100  100     0     0    0    0    0>
+            ;
+    };
+};
