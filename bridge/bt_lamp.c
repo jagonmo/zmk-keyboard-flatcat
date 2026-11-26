@@ -121,6 +121,7 @@ static int get_array_attributes(int32_t *len, uint8_t **data) {
         .kind = LA_KIND_KEYBOARD,
         .min_update_us = LA_UPDATE_US,
     };
+    LOG_DBG("LA get array attributes (%d lamps)", (int)LAMP_COUNT);
     *data = (uint8_t *)&r;
     *len = sizeof(r);
     return 0;
@@ -148,6 +149,7 @@ static int get_attr_response(int32_t *len, uint8_t **data) {
 
     /* Auto-advance and wrap, so the host can walk the array. */
     req_lamp_id = (id + 1 < LAMP_COUNT) ? id + 1 : 0;
+    LOG_DBG("LA get lamp %d (col %d row %d)", id, lamp_col[id], lamp_row[id]);
 
     *data = (uint8_t *)&r;
     *len = sizeof(r);
@@ -156,11 +158,13 @@ static int get_attr_response(int32_t *len, uint8_t **data) {
 
 static int set_attr_request(const uint8_t *data, int32_t len) {
     if (len < (int32_t)sizeof(struct la_attr_request_report)) {
+        LOG_WRN("LA set request too short (%d bytes)", (int)len);
         return -EINVAL;
     }
     const struct la_attr_request_report *r = (const void *)data;
 
     req_lamp_id = r->lamp_id < LAMP_COUNT ? r->lamp_id : 0;
+    LOG_DBG("LA set request lamp %d (len %d)", r->lamp_id, (int)len);
     return 0;
 }
 
@@ -244,6 +248,7 @@ static int set_control(const uint8_t *data, int32_t len) {
 static int get_report_cb(const struct device *dev, struct usb_setup_packet *setup, int32_t *len,
                          uint8_t **data) {
     if ((setup->wValue & HID_TYPE_MASK) != HID_REPORT_TYPE_FEATURE) {
+        LOG_DBG("LA get_report wValue 0x%04x not a feature report", setup->wValue);
         return -ENOTSUP;
     }
     switch (setup->wValue & HID_ID_MASK) {
@@ -252,6 +257,7 @@ static int get_report_cb(const struct device *dev, struct usb_setup_packet *setu
     case LA_ID_ATTR_RESPONSE:
         return get_attr_response(len, data);
     default:
+        LOG_WRN("LA get of unhandled report id %d", setup->wValue & HID_ID_MASK);
         return -ENOTSUP;
     }
 }
@@ -259,6 +265,7 @@ static int get_report_cb(const struct device *dev, struct usb_setup_packet *setu
 static int set_report_cb(const struct device *dev, struct usb_setup_packet *setup, int32_t *len,
                          uint8_t **data) {
     if ((setup->wValue & HID_TYPE_MASK) != HID_REPORT_TYPE_FEATURE) {
+        LOG_DBG("LA set_report wValue 0x%04x not a feature report", setup->wValue);
         return -ENOTSUP;
     }
     switch (setup->wValue & HID_ID_MASK) {
@@ -271,6 +278,7 @@ static int set_report_cb(const struct device *dev, struct usb_setup_packet *setu
     case LA_ID_CONTROL:
         return set_control(*data, *len);
     default:
+        LOG_WRN("LA set of unhandled report id %d", setup->wValue & HID_ID_MASK);
         return -ENOTSUP;
     }
 }
