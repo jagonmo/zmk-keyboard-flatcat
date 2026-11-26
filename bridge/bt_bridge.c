@@ -49,6 +49,7 @@ LOG_MODULE_REGISTER(bt_bridge, CONFIG_ZMK_LOG_LEVEL);
 
 struct report_chr {
     uint16_t value_handle;
+    uint16_t end_handle; /* last handle before the next characteristic */
     uint16_t ccc_handle;
     uint16_t ref_handle;
     uint8_t id;
@@ -348,17 +349,27 @@ static uint8_t descriptor_cb(struct bt_conn *conn, const struct bt_gatt_attr *at
 }
 
 static void discover_next_descriptors(struct bt_conn *conn) {
+    /* A report with no room for descriptors has none: skip it (a start past
+     * the end would make bt_gatt_discover() fail). */
+    while (desc_idx < n_reports &&
+           reports[desc_idx].value_handle + 1 > reports[desc_idx].end_handle) {
+        desc_idx++;
+    }
+
     if (desc_idx >= n_reports) {
         ref_idx = 0;
         read_next_ref(conn);
         return;
     }
 
-    /* The search ends by itself at the next characteristic declaration. */
+    /* Bounded to this characteristic. Zephyr's descriptor discovery does NOT
+     * stop at the next characteristic: it skips the declaration and value and
+     * keeps going, so an open-ended search would hand every report the CCC
+     * and Report Reference of the last one in the service. */
     disc.uuid = NULL;
     disc.func = descriptor_cb;
     disc.start_handle = reports[desc_idx].value_handle + 1;
-    disc.end_handle = hids_end;
+    disc.end_handle = reports[desc_idx].end_handle;
     disc.type = BT_GATT_DISCOVER_DESCRIPTOR;
 
     int err = bt_gatt_discover(conn, &disc);
@@ -374,12 +385,22 @@ static uint8_t characteristic_cb(struct bt_conn *conn, const struct bt_gatt_attr
             fail_link(conn, "keyboard has no HID report characteristic");
             return BT_GATT_ITER_STOP;
         }
+        /* The last report's descriptors run to the end of the service. */
+        if (!reports[n_reports - 1].end_handle) {
+            reports[n_reports - 1].end_handle = hids_end;
+        }
         desc_idx = 0;
         discover_next_descriptors(conn);
         return BT_GATT_ITER_STOP;
     }
 
     const struct bt_gatt_chrc *chrc = attr->user_data;
+
+    /* attr->handle is this characteristic's declaration, so the previous
+     * report's descriptors end right before it. */
+    if (n_reports && !reports[n_reports - 1].end_handle) {
+        reports[n_reports - 1].end_handle = attr->handle - 1;
+    }
 
     if (!bt_uuid_cmp(chrc->uuid, BT_UUID_HIDS_REPORT) && n_reports < MAX_REPORTS) {
         memset(&reports[n_reports], 0, sizeof(reports[n_reports]));
