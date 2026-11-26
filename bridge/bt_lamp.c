@@ -427,6 +427,9 @@ static void param_handler(struct k_work *work) {
     struct bt_le_conn_param p = peer_pref;
     k_spin_unlock(&pref_lock, key);
     if (want_low) {
+        /* Shortest interval the keyboard accepts (its minimum is 6 = 7.5 ms):
+         * more connection events per second for the frames. */
+        p.interval_max = p.interval_min;
         p.latency = 0;
     }
 
@@ -437,7 +440,8 @@ static void param_handler(struct k_work *work) {
         return;
     }
     lowlat_applied = want_low;
-    LOG_INF("Dynamic Lighting %s: peripheral latency %d", want_low ? "active" : "idle", p.latency);
+    LOG_INF("Dynamic Lighting %s: interval %d-%d, peripheral latency %d",
+            want_low ? "active" : "idle", p.interval_min, p.interval_max, p.latency);
 }
 
 /* ====================================================================== */
