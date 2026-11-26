@@ -26,17 +26,25 @@ config ZMK_BT_BRIDGE_PEER_NAME
     string "Name prefix of the keyboard, used for the first pairing"
     default "FlatCat"
     help
-      Before the dongle is bonded it connects to the first device that
-      advertises the HID service and whose name starts with this. Leave empty
-      to accept any HID device. Once bonded, only the bonded keyboard is used.
+      Used only the first time: the dongle connects to the first device that
+      advertises the HID service and whose name starts with this. After that it
+      is bound to that keyboard's address (stored in settings) and ignores
+      every other device, even ones with the same name. Leave empty to accept
+      any HID device on the first pairing.
+
+      With several keyboards of the same name nearby, give each keyboard its
+      own ZMK_KEYBOARD_NAME and set this to match, or use
+      ZMK_BT_BRIDGE_PEER_ADDR.
 
 config ZMK_BT_BRIDGE_PEER_ADDR
     string "Fixed address of the keyboard (optional)"
     default ""
     help
-      Restricts the dongle to one device, e.g. "AA:BB:CC:DD:EE:FF". Takes
-      priority over the name and over the bond. The address shows in the
-      debug log when the dongle finds the keyboard.
+      Binds the dongle to one keyboard from the start, e.g.
+      "AA:BB:CC:DD:EE:FF". Takes priority over the name and over the stored
+      address. An nRF52 keyboard's address is the chip's factory address, so
+      it stays the same even when the keyboard's memory is wiped. The debug
+      build (flatcat-bridge-debug) logs it when it finds the keyboard.
 
 config ZMK_BT_BRIDGE_CLEAR_BONDS_ON_START
     bool "Forget the bonded keyboard at every start"

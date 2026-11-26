@@ -136,15 +136,31 @@ run on the keyboard as usual.
 1. Flash `flatcat-bridge` on the nice!nano and plug it into the PC.
 2. On the keyboard, select a **free** Bluetooth profile (`LOWER` + one of the
    profile keys; clear it with `BT_CLR` if it was used before).
-3. The dongle finds the keyboard by name ("FlatCat"), pairs and bonds. From then
-   on it reconnects to that keyboard only.
+3. The dongle finds the keyboard by name ("FlatCat"), pairs, and stores that
+   keyboard's address. From then on it is bound to that keyboard: it ignores
+   every other device, even another FlatCat.
 
 To use the dongle, select its profile on the keyboard like any other device.
 
-### Start over
+### If the keyboard forgets the dongle
 
-Flash `settings-reset` on the dongle, then `flatcat-bridge` again, and clear the
-dongle's profile on the keyboard with `BT_CLR`.
+Clearing the dongle's profile (`BT_CLR`) or wiping the keyboard's memory is fine:
+the dongle notices that the keyboard no longer has the key, drops its own copy
+and pairs again with the same keyboard. Select a free profile on the keyboard
+and wait a few seconds. The keyboard's address is its chip's factory address,
+so it does not change when the keyboard's memory is wiped.
+
+### More than one keyboard
+
+Each dongle stays with the keyboard it first paired with. For that first
+pairing, only one keyboard named "FlatCat" should be looking for a host, or set
+the keyboard's address in `config/flatcatbridge.conf`
+(`CONFIG_ZMK_BT_BRIDGE_PEER_ADDR`); `flatcat-bridge-debug` logs it.
+
+### Pair the dongle with a different keyboard
+
+Flash `settings-reset` on the dongle, then `flatcat-bridge` again: it forgets
+the stored keyboard and pairs by name once more.
 
 ### Problems
 

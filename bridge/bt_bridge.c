@@ -75,6 +75,26 @@ static bt_addr_le_t cfg_peer;
 static bool bonded;
 static bt_addr_le_t bond_addr;
 
+/* The keyboard this dongle paired with, kept in settings ("bt_bridge/peer").
+ * Unlike the bond it survives when the keyboard loses its keys, so the dongle
+ * re-pairs with that same keyboard and never with another one nearby. The
+ * keyboard's address is its chip's factory address, so it does not change
+ * even when the keyboard's memory is wiped. */
+static bool learned_set;
+static bt_addr_le_t learned_peer;
+
+#define LEARNED_KEY "bt_bridge/peer"
+
+/* Address whose bond must be dropped (keyboard lost its key). */
+static bt_addr_le_t stale_addr;
+
+/* Wait before scanning again after a disconnect. Longer after a security
+ * failure, e.g. the keyboard refused to pair because no free profile is
+ * selected: retrying every half second would only flood its radio. */
+#define RESCAN_MS          500
+#define RESCAN_SEC_FAIL_MS 3000
+static uint32_t rescan_ms = RESCAN_MS;
+
 static struct report_chr reports[MAX_REPORTS];
 static int n_reports;
 static uint16_t led_handle;
@@ -89,6 +109,7 @@ K_MSGQ_DEFINE(usb_msgq, sizeof(struct usb_pkt), 16, 4);
 static struct k_work usb_work;
 static struct k_work led_work;
 static struct k_work release_work;
+static struct k_work unpair_work;
 static struct k_work_delayable scan_work;
 
 static void schedule_scan(uint32_t delay_ms) {
@@ -463,24 +484,61 @@ static void bond_cb(const struct bt_bond_info *info, void *user_data) {
     bonded = true;
 }
 
+static void save_learned(const bt_addr_le_t *addr) {
+    if (learned_set && bt_addr_le_cmp(addr, &learned_peer) == 0) {
+        return;
+    }
+    bt_addr_le_copy(&learned_peer, addr);
+    learned_set = true;
+
+    int err = settings_save_one(LEARNED_KEY, &learned_peer, sizeof(learned_peer));
+    char str[BT_ADDR_LE_STR_LEN];
+    bt_addr_le_to_str(addr, str, sizeof(str));
+    if (err) {
+        LOG_ERR("could not store the keyboard address %s (%d)", str, err);
+    } else {
+        LOG_INF("bound to keyboard %s", str);
+    }
+}
+
 static void refresh_bond(void) {
     bonded = false;
     bt_foreach_bond(BT_ID_DEFAULT, bond_cb, NULL);
+
+    /* Bonded by an older firmware that did not store the address yet. */
+    if (bonded && !learned_set) {
+        save_learned(&bond_addr);
+    }
 }
 
-/* Which device may we talk to?
- *   1. a fixed address from Kconfig, if given
- *   2. the bonded keyboard, once paired
- *   3. otherwise the first device that advertises the HID service with the
- *      wanted name: this is the one-time pairing. */
+static enum bridge_target target_mode(void) {
+    return bridge_target_mode(cfg_peer_set, learned_set, bonded);
+}
+
+/* Which device may we talk to? See bridge_target_mode() in bt_bridge_ad.h. */
 static bool peer_acceptable(const bt_addr_le_t *addr, const struct bridge_ad_info *info) {
-    if (cfg_peer_set) {
-        return bt_addr_le_cmp(addr, &cfg_peer) == 0;
+    enum bridge_target mode = target_mode();
+    const bt_addr_le_t *want = mode == BRIDGE_TARGET_FIXED     ? &cfg_peer
+                               : mode == BRIDGE_TARGET_LEARNED ? &learned_peer
+                               : mode == BRIDGE_TARGET_BOND    ? &bond_addr
+                                                               : NULL;
+
+    return bridge_peer_accept(mode, want && bt_addr_le_cmp(addr, want) == 0, info);
+}
+
+/* The keyboard no longer has the key for our bond (its memory was wiped or its
+ * profile cleared). Drop our side too, so the next connection pairs from
+ * scratch, with the same keyboard (the learned address is kept). */
+static void unpair_work_handler(struct k_work *work) {
+    char str[BT_ADDR_LE_STR_LEN];
+    bt_addr_le_to_str(&stale_addr, str, sizeof(str));
+    LOG_WRN("keyboard %s lost its key: dropping our bond, it will pair again", str);
+
+    int err = bt_unpair(BT_ID_DEFAULT, &stale_addr);
+    if (err) {
+        LOG_ERR("could not drop the bond (%d)", err);
     }
-    if (bonded) {
-        return bt_addr_le_cmp(addr, &bond_addr) == 0;
-    }
-    return info->hid && info->name_ok;
+    bonded = false;
 }
 
 static void scan_cb(const bt_addr_le_t *addr, int8_t rssi, uint8_t type,
@@ -532,8 +590,15 @@ static void scan_work_handler(struct k_work *work) {
     }
 
     scanning = true;
-    LOG_INF("scanning for the keyboard (%s)",
-            cfg_peer_set ? "fixed address" : bonded ? "bonded" : "pairing mode: first match");
+
+    static const char *const mode_names[] = {
+        [BRIDGE_TARGET_FIXED] = "fixed address from Kconfig",
+        [BRIDGE_TARGET_LEARNED] = "the bound keyboard",
+        [BRIDGE_TARGET_BOND] = "the bonded keyboard",
+        [BRIDGE_TARGET_NAME] = "pairing mode: first keyboard named \"" CONFIG_ZMK_BT_BRIDGE_PEER_NAME
+                               "\"",
+    };
+    LOG_INF("scanning for %s", mode_names[target_mode()]);
 }
 
 static void connected_cb(struct bt_conn *conn, uint8_t err) {
@@ -573,7 +638,8 @@ static void disconnected_cb(struct bt_conn *conn, uint8_t reason) {
     peer_conn = NULL;
 
     k_work_submit_to_queue(&bridge_q, &release_work);
-    schedule_scan(500);
+    schedule_scan(rescan_ms);
+    rescan_ms = RESCAN_MS;
 }
 
 static void security_changed_cb(struct bt_conn *conn, bt_security_t level,
@@ -582,10 +648,18 @@ static void security_changed_cb(struct bt_conn *conn, bt_security_t level,
         return;
     }
 
+    if (err == BT_SECURITY_ERR_PIN_OR_KEY_MISSING) {
+        /* Our stored key was rejected. bt_unpair() also closes the link; it
+         * touches flash, so it runs on the bridge's queue, not here. */
+        bt_addr_le_copy(&stale_addr, bt_conn_get_dst(conn));
+        k_work_submit_to_queue(&bridge_q, &unpair_work);
+        return;
+    }
+
     if (err) {
-        LOG_ERR("security failed (%d): was the keyboard's Bluetooth profile for the dongle "
-                "selected and free?",
+        LOG_ERR("security failed (%d): is a FREE Bluetooth profile selected on the keyboard?",
                 err);
+        rescan_ms = RESCAN_SEC_FAIL_MS;
         bt_conn_disconnect(conn, BT_HCI_ERR_AUTH_FAIL);
         return;
     }
@@ -604,6 +678,10 @@ BT_CONN_CB_DEFINE(bridge_conn_cb) = {
 
 static void pairing_complete_cb(struct bt_conn *conn, bool bondedp) {
     LOG_INF("paired with the keyboard (bonded: %s)", bondedp ? "yes" : "no");
+
+    if (bondedp && !cfg_peer_set) {
+        save_learned(bt_conn_get_dst(conn));
+    }
 }
 
 static void pairing_failed_cb(struct bt_conn *conn, enum bt_security_err reason) {
@@ -633,13 +711,33 @@ static int bridge_settings_commit(void) {
     return 0;
 }
 
-SETTINGS_STATIC_HANDLER_DEFINE(bt_bridge, "bt_bridge", NULL, NULL, bridge_settings_commit, NULL);
+static int bridge_settings_set(const char *name, size_t len, settings_read_cb read_cb,
+                               void *cb_arg) {
+    if (!settings_name_steq(name, "peer", NULL)) {
+        return -ENOENT;
+    }
+    if (len != sizeof(learned_peer)) {
+        LOG_WRN("stored keyboard address has the wrong size, ignoring it");
+        return 0;
+    }
+
+    int rc = read_cb(cb_arg, &learned_peer, sizeof(learned_peer));
+    if (rc == sizeof(learned_peer)) {
+        learned_set = true;
+        return 0;
+    }
+    return rc < 0 ? rc : -EINVAL;
+}
+
+SETTINGS_STATIC_HANDLER_DEFINE(bt_bridge, "bt_bridge", NULL, bridge_settings_set,
+                               bridge_settings_commit, NULL);
 
 static int bridge_init(void) {
     k_work_queue_start(&bridge_q, bridge_stack, K_THREAD_STACK_SIZEOF(bridge_stack), 5, NULL);
     k_work_init(&usb_work, usb_work_handler);
     k_work_init(&led_work, led_work_handler);
     k_work_init(&release_work, release_work_handler);
+    k_work_init(&unpair_work, unpair_work_handler);
     k_work_init_delayable(&scan_work, scan_work_handler);
 
     if (sizeof(CONFIG_ZMK_BT_BRIDGE_PEER_ADDR) > 1) {

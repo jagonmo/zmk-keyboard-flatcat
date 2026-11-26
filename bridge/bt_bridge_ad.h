@@ -1,5 +1,5 @@
 /*
- * Advertising-data parsing for the BLE bridge.
+ * Advertising-data parsing and peer selection for the BLE bridge.
  *
  * Only <stdint.h>/<string.h>, so it can be unit-tested on the host.
  */
@@ -67,4 +67,45 @@ static inline struct bridge_ad_info bridge_ad_scan(const uint8_t *ad, size_t len
     }
 
     return info;
+}
+
+/* ---- Which keyboard may the dongle connect to? ----
+ *
+ * In priority order:
+ *   FIXED    an address set in Kconfig (ZMK_BT_BRIDGE_PEER_ADDR)
+ *   LEARNED  the keyboard this dongle paired with, remembered in settings. It
+ *            stays even when the bond is dropped, so re-pairing goes to the
+ *            same keyboard and never to another one nearby.
+ *   BOND     a bond from before the learned address existed (older firmware)
+ *   NAME     nothing known yet: first device that advertises the HID service
+ *            with the wanted name. This is the one-time pairing.
+ */
+enum bridge_target {
+    BRIDGE_TARGET_FIXED,
+    BRIDGE_TARGET_LEARNED,
+    BRIDGE_TARGET_BOND,
+    BRIDGE_TARGET_NAME,
+};
+
+static inline enum bridge_target bridge_target_mode(bool fixed, bool learned, bool bonded) {
+    if (fixed) {
+        return BRIDGE_TARGET_FIXED;
+    }
+    if (learned) {
+        return BRIDGE_TARGET_LEARNED;
+    }
+    if (bonded) {
+        return BRIDGE_TARGET_BOND;
+    }
+    return BRIDGE_TARGET_NAME;
+}
+
+/* `is_target` is whether the advertiser's address equals the address the mode
+ * names (fixed, learned or bond); it is ignored in NAME mode. */
+static inline bool bridge_peer_accept(enum bridge_target mode, bool is_target,
+                                      const struct bridge_ad_info *ad) {
+    if (mode == BRIDGE_TARGET_NAME) {
+        return ad->hid && ad->name_ok;
+    }
+    return is_target;
 }
