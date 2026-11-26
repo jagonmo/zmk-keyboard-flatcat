@@ -110,7 +110,9 @@ static volatile uint8_t host_leds;
 K_THREAD_STACK_DEFINE(bridge_stack, 1536);
 static struct k_work_q bridge_q;
 
-K_THREAD_STACK_DEFINE(bridge_tx_stack, 1536);
+/* Room for a frame on the stack plus the Bluetooth write path below it. The
+ * dongle has no stack overflow protection, so this errs on the large side. */
+K_THREAD_STACK_DEFINE(bridge_tx_stack, 2048);
 struct k_work_q bridge_tx_q;
 
 /* Subscriptions still waiting for the keyboard's answer. */
@@ -782,10 +784,14 @@ SETTINGS_STATIC_HANDLER_DEFINE(bt_bridge, "bt_bridge", NULL, bridge_settings_set
                                bridge_settings_commit, NULL);
 
 static int bridge_init(void) {
-    k_work_queue_start(&bridge_q, bridge_stack, K_THREAD_STACK_SIZEOF(bridge_stack), 5, NULL);
+    /* Named, so the debug build's thread analyzer can report each one. */
+    static const struct k_work_queue_config q_cfg = {.name = "bridge"};
+    static const struct k_work_queue_config tx_cfg = {.name = "bridge_tx"};
+
+    k_work_queue_start(&bridge_q, bridge_stack, K_THREAD_STACK_SIZEOF(bridge_stack), 5, &q_cfg);
     /* Lower priority than keystrokes. */
     k_work_queue_start(&bridge_tx_q, bridge_tx_stack, K_THREAD_STACK_SIZEOF(bridge_tx_stack), 7,
-                       NULL);
+                       &tx_cfg);
     k_work_init(&usb_work, usb_work_handler);
     k_work_init(&led_work, led_work_handler);
     k_work_init(&release_work, release_work_handler);

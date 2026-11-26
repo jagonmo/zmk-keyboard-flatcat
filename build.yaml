@@ -15,7 +15,8 @@ include:
   - board: nice_nano//zmk
     shield: flatcatbridge
     snippet: zmk-usb-logging
-    cmake-args: -DCONFIG_ZMK_LOG_LEVEL_DBG=y
+    # Also prints every thread's stack use every 30 s (thread analyzer).
+    cmake-args: -DCONFIG_ZMK_LOG_LEVEL_DBG=y -DCONFIG_THREAD_NAME=y -DCONFIG_THREAD_ANALYZER=y -DCONFIG_THREAD_ANALYZER_AUTO=y -DCONFIG_THREAD_ANALYZER_AUTO_INTERVAL=30
     artifact-name: flatcat-bridge-debug
 
   # Forgets the dongle's stored bond (flash on the dongle, then flatcat-bridge again).

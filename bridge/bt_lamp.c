@@ -94,6 +94,8 @@ static atomic_t streaming;            /* Windows in host mode (read in BT contex
 static struct k_spinlock pref_lock;
 static struct bt_le_conn_param peer_pref = BT_LE_CONN_PARAM_INIT(6, 12, 30, 400);
 static int lowlat_applied = -1;       /* bridge_tx_q only; -1: not set on this link */
+static struct k_work_delayable param_work;
+static void param_handler(struct k_work *work);
 
 static struct k_work_delayable tx_work;
 static struct k_work start_work;
@@ -291,6 +293,7 @@ static int lamp_usb_init(void) {
     }
 
     k_work_init_delayable(&tx_work, tx_handler);
+    k_work_init_delayable(&param_work, param_handler);
     k_work_init(&start_work, start_handler);
 
     hid_dev = device_get_binding("HID_1");
@@ -346,25 +349,10 @@ static void tx_handler(struct k_work *work) {
         return;
     }
 
-    /* Latency first: frames sent while it is still 30 crawl. */
-    bool want_low = atomic_get(&streaming);
-    if (lowlat_applied != (int)want_low) {
-        k_spinlock_key_t pk = k_spin_lock(&pref_lock);
-        struct bt_le_conn_param p = peer_pref;
-        k_spin_unlock(&pref_lock, pk);
-        if (want_low) {
-            p.latency = 0;
-        }
-
-        int err = bt_conn_le_param_update(lamp_conn, &p);
-        if (err && err != -EALREADY) {
-            LOG_WRN("connection update failed (%d), retrying", err);
-            k_work_reschedule_for_queue(&bridge_tx_q, &tx_work, K_MSEC(500));
-        } else {
-            lowlat_applied = want_low;
-            LOG_INF("Dynamic Lighting %s: peripheral latency %d", want_low ? "active" : "idle",
-                    p.latency);
-        }
+    /* Latency: its own work item, so the HCI command it sends does not stack on
+     * top of this handler's frame buffers. Same queue, runs right after. */
+    if (lowlat_applied != (int)atomic_get(&streaming)) {
+        k_work_reschedule_for_queue(&bridge_tx_q, &param_work, K_NO_WAIT);
     }
 
     struct rgbp_lr_rgb cur[LAMP_COUNT];
@@ -415,6 +403,33 @@ static void tx_handler(struct k_work *work) {
         }
         sent_autonomous = auto_now;
     }
+}
+
+/* Low latency while Windows drives the lamps, the keyboard's own otherwise. */
+static void param_handler(struct k_work *work) {
+    if (!atomic_get(&link_up) || !atomic_get(&ready) || !lamp_conn) {
+        return;
+    }
+    bool want_low = atomic_get(&streaming);
+    if (lowlat_applied == (int)want_low) {
+        return;
+    }
+
+    k_spinlock_key_t key = k_spin_lock(&pref_lock);
+    struct bt_le_conn_param p = peer_pref;
+    k_spin_unlock(&pref_lock, key);
+    if (want_low) {
+        p.latency = 0;
+    }
+
+    int err = bt_conn_le_param_update(lamp_conn, &p);
+    if (err && err != -EALREADY) {
+        LOG_WRN("connection update failed (%d), retrying", err);
+        k_work_reschedule_for_queue(&bridge_tx_q, &param_work, K_MSEC(500));
+        return;
+    }
+    lowlat_applied = want_low;
+    LOG_INF("Dynamic Lighting %s: peripheral latency %d", want_low ? "active" : "idle", p.latency);
 }
 
 /* ====================================================================== */
