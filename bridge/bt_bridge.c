@@ -37,6 +37,7 @@
 #include <zmk/events/hid_indicators_changed.h>
 
 #include "bt_bridge_ad.h"
+#include "bt_bridge_internal.h"
 
 LOG_MODULE_REGISTER(bt_bridge, CONFIG_ZMK_LOG_LEVEL);
 
@@ -101,9 +102,19 @@ static uint16_t led_handle;
 
 static volatile uint8_t host_leds;
 
-/* ---- work: everything that can block runs here, never in the BT RX thread ---- */
+/* ---- work queues ----
+ * bridge_q:    keystrokes to USB, scanning. Never waits on the radio.
+ * bridge_tx_q: every Bluetooth write to the keyboard (LEDs, lamp colours),
+ *              which can wait for a free radio buffer.
+ * Neither runs in the Bluetooth RX thread. */
 K_THREAD_STACK_DEFINE(bridge_stack, 1536);
 static struct k_work_q bridge_q;
+
+K_THREAD_STACK_DEFINE(bridge_tx_stack, 1536);
+struct k_work_q bridge_tx_q;
+
+/* Subscriptions still waiting for the keyboard's answer. */
+static int subs_pending;
 
 K_MSGQ_DEFINE(usb_msgq, sizeof(struct usb_pkt), 16, 4);
 static struct k_work usb_work;
@@ -202,7 +213,7 @@ static int indicators_listener(const zmk_event_t *eh) {
 
     if (ev) {
         host_leds = ev->indicators;
-        k_work_submit_to_queue(&bridge_q, &led_work);
+        k_work_submit_to_queue(&bridge_tx_q, &led_work);
     }
     return ZMK_EV_EVENT_BUBBLE;
 }
@@ -250,6 +261,12 @@ static void subscribed_cb(struct bt_conn *conn, uint8_t err,
     } else {
         LOG_DBG("subscribed to handle %d", params->value_handle);
     }
+
+    /* Once the HID side is settled, the (optional) lamp service is next: one
+     * GATT procedure at a time. */
+    if (subs_pending > 0 && --subs_pending == 0 && link_ready) {
+        bridge_lamp_start(conn);
+    }
 }
 
 /* ====================================================================== */
@@ -276,6 +293,7 @@ static void finish_discovery(struct bt_conn *conn) {
     int subscribed = 0;
 
     led_handle = 0;
+    subs_pending = 0;
 
     for (int i = 0; i < n_reports; i++) {
         struct report_chr *r = &reports[i];
@@ -296,6 +314,9 @@ static void finish_discovery(struct bt_conn *conn) {
                 LOG_ERR("subscribe failed (%d)", err);
             } else {
                 subscribed++;
+                if (!err) {
+                    subs_pending++; /* subscribed_cb will report it */
+                }
             }
         } else if (r->type == REPORT_TYPE_OUTPUT && r->id == ZMK_HID_REPORT_ID_LEDS) {
             led_handle = r->value_handle;
@@ -312,7 +333,12 @@ static void finish_discovery(struct bt_conn *conn) {
             led_handle ? "available" : "not available");
 
     /* Bring the keyboard's LEDs in line with the PC (caps lock may already be on). */
-    k_work_submit_to_queue(&bridge_q, &led_work);
+    k_work_submit_to_queue(&bridge_tx_q, &led_work);
+
+    /* Every subscription was already in place: no callback will come. */
+    if (subs_pending == 0) {
+        bridge_lamp_start(conn);
+    }
 }
 
 static uint8_t ref_read_cb(struct bt_conn *conn, uint8_t err, struct bt_gatt_read_params *params,
@@ -633,6 +659,8 @@ static void disconnected_cb(struct bt_conn *conn, uint8_t reason) {
     link_ready = false;
     led_handle = 0;
     n_reports = 0;
+    subs_pending = 0;
+    bridge_lamp_stop();
 
     bt_conn_unref(peer_conn);
     peer_conn = NULL;
@@ -734,6 +762,9 @@ SETTINGS_STATIC_HANDLER_DEFINE(bt_bridge, "bt_bridge", NULL, bridge_settings_set
 
 static int bridge_init(void) {
     k_work_queue_start(&bridge_q, bridge_stack, K_THREAD_STACK_SIZEOF(bridge_stack), 5, NULL);
+    /* Lower priority than keystrokes. */
+    k_work_queue_start(&bridge_tx_q, bridge_tx_stack, K_THREAD_STACK_SIZEOF(bridge_tx_stack), 7,
+                       NULL);
     k_work_init(&usb_work, usb_work_handler);
     k_work_init(&led_work, led_work_handler);
     k_work_init(&release_work, release_work_handler);

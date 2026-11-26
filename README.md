@@ -142,6 +142,29 @@ run on the keyboard as usual.
 
 To use the dongle, select its profile on the keyboard like any other device.
 
+### Windows Dynamic Lighting
+
+The dongle shows Windows a LampArray on its USB port (Settings →
+Personalization → Dynamic Lighting) and sends the colours to the keyboard over
+Bluetooth. Both sides are on by default: `CONFIG_ZMK_BT_BRIDGE_LAMP_ARRAY` in
+`config/flatcatbridge.conf` and `CONFIG_RGB_PRO_LAMP_ARRAY_REMOTE` in
+`config/flatcat.conf`.
+
+- Windows' colours show only while the dongle's profile is selected on the
+  keyboard. Any other profile (another PC, a phone) brings the keyboard's own
+  effects back.
+- Overlays (caps lock, BT status, battery) and the lighting on/off and
+  brightness keys work on top of Windows' colours.
+- Only the lamps that changed are sent, and a frame appears only once it is
+  complete. Fast animations depend on the Bluetooth link; the debug log of
+  `flatcat-bridge-debug` shows how many lamps fit in each write.
+- Windows caches USB descriptors: after flashing the dongle for the first
+  time with this, unplug and replug it. If it does not appear, remove it in
+  Device Manager and plug it in again.
+- The keyboard gains a small Bluetooth service for this. It sits after the
+  keyboard (HID) service, so hosts that are already paired keep working; if
+  one misbehaves, remove and re-pair it.
+
 ### If the keyboard forgets the dongle
 
 Clearing the dongle's profile (`BT_CLR`) or wiping the keyboard's memory is fine:

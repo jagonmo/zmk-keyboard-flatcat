@@ -52,6 +52,32 @@ config ZMK_BT_BRIDGE_CLEAR_BONDS_ON_START
       For pairing tests only: the dongle will pair again each time it starts.
       The keyboard must have the same profile cleared.
 
+config ZMK_BT_BRIDGE_LAMP_ARRAY
+    bool "Windows Dynamic Lighting (HID LampArray) on the dongle"
+    help
+      Exposes HID LampArray to Windows on the dongle's USB port and forwards
+      the colours to the keyboard over Bluetooth. The keyboard needs
+      CONFIG_RGB_PRO_LAMP_ARRAY_REMOTE=y (zmk-pro-rgb); without it the keys
+      work as usual and Dynamic Lighting just has no effect.
+
+      Needs CONFIG_USB_HID_DEVICE_COUNT=2 and the keyboard's LED map
+      (rgb_pro_led_map.h in the config folder), which gives the lamp count
+      and positions.
+
+if ZMK_BT_BRIDGE_LAMP_ARRAY
+
+config ZMK_BT_BRIDGE_LAMP_PITCH_UM
+    int "Distance between neighbouring keys (micrometres)"
+    default 19050
+
+config ZMK_BT_BRIDGE_LAMP_UPDATE_US
+    int "Shortest update interval reported to Windows (microseconds)"
+    default 33000
+    help
+      33 ms matches the keyboard's default animation tick (RGB_PRO_TICK_MS).
+
+endif # ZMK_BT_BRIDGE_LAMP_ARRAY
+
 config ZMK_BT_BRIDGE_INIT_PRIORITY
     int "Init priority"
     default 95
