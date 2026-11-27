@@ -1,5 +1,6 @@
 /*
- * Shared between the bridge (bt_bridge.c) and its LampArray part (bt_lamp.c).
+ * Shared between the bridge (bt_bridge.c) and its optional parts: LampArray
+ * (bt_lamp.c) and battery / brightness (bt_status.c).
  */
 
 #pragma once
@@ -28,4 +29,14 @@ static inline bool bridge_lamp_adjust_params(struct bt_le_conn_param *param) {
     ARG_UNUSED(param);
     return true;
 }
+#endif
+
+#if IS_ENABLED(CONFIG_ZMK_BT_BRIDGE_STATUS)
+/* The keyboard's HID reports are subscribed: look for its battery service and
+ * brightness characteristic. Same context and rules as bridge_lamp_start(). */
+void bridge_status_start(struct bt_conn *conn);
+void bridge_status_stop(void);
+#else
+static inline void bridge_status_start(struct bt_conn *conn) { ARG_UNUSED(conn); }
+static inline void bridge_status_stop(void) {}
 #endif

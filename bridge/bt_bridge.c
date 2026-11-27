@@ -264,10 +264,11 @@ static void subscribed_cb(struct bt_conn *conn, uint8_t err,
         LOG_DBG("subscribed to handle %d", params->value_handle);
     }
 
-    /* Once the HID side is settled, the (optional) lamp service is next: one
-     * GATT procedure at a time. */
+    /* Once the HID side is settled, the optional parts start. Their GATT
+     * requests have their own parameters; the stack queues them on the link. */
     if (subs_pending > 0 && --subs_pending == 0 && link_ready) {
         bridge_lamp_start(conn);
+        bridge_status_start(conn);
     }
 }
 
@@ -340,6 +341,7 @@ static void finish_discovery(struct bt_conn *conn) {
     /* Every subscription was already in place: no callback will come. */
     if (subs_pending == 0) {
         bridge_lamp_start(conn);
+        bridge_status_start(conn);
     }
 }
 
@@ -663,6 +665,7 @@ static void disconnected_cb(struct bt_conn *conn, uint8_t reason) {
     n_reports = 0;
     subs_pending = 0;
     bridge_lamp_stop();
+    bridge_status_stop();
 
     bt_conn_unref(peer_conn);
     peer_conn = NULL;
