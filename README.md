@@ -57,9 +57,6 @@ To flash: double-tap reset to get the `NICENANO` drive, then copy the `.uf2`.
   wiped).
 - **Windows Dynamic Lighting:** the dongle shows Windows a LampArray on its USB
   port and streams the colours to the keyboard over Bluetooth.
-- **Keyboard battery on the PC** and **brightness set from the PC** (for
-  example bright by day, dim at night). See
-  [Battery and brightness from the PC](#battery-and-brightness-from-the-pc).
 - **Wakes the PC from sleep** with a key press, like a wired keyboard.
 
 ## RGB controls (Lower layer)
@@ -165,8 +162,6 @@ wakes the PC; it is not typed. It needs:
   USB powered and allows USB wake.
 - The keyboard still connected to the dongle, i.e. not in its own deep sleep.
 
-Battery reports and brightness changes never wake the PC; only key presses do.
-
 ### NKRO
 
 Keyboard and dongle both use ZMK's NKRO report, so any number of keys can be
@@ -179,47 +174,6 @@ held at once. Limits that come with it:
   keyboard does not work there, use a wired keyboard for BIOS setup.
 - After flashing, hosts that were paired over Bluetooth before may need to be
   removed and paired again, because they cache the old report layout.
-
-## Battery and brightness from the PC
-
-The dongle has a third USB HID interface (`CONFIG_ZMK_BT_BRIDGE_STATUS`) with:
-
-- **The keyboard's battery level**, read from the keyboard's standard Bluetooth
-  Battery Service and kept up to date. It is a standard HID "Battery Strength"
-  value, which **Linux** shows as a normal device battery. **Windows** does not
-  show battery levels for USB devices in Settings (it does only for Bluetooth
-  devices), so on Windows read it with `tools/flatcat-status.ps1`.
-- **A brightness control:** the PC sends a brightness (0–100 %) and the
-  keyboard applies it, exactly as if the brightness keys had been pressed. It
-  needs the keyboard firmware with zmk-pro-rgb's dongle support
-  (`CONFIG_RGB_PRO_LAMP_ARRAY_REMOTE=y`, already on).
-
-`tools/flatcat-status.ps1` (Windows PowerShell or PowerShell 7):
-
-```powershell
-# battery and last brightness
-powershell -ExecutionPolicy Bypass -File .\tools\flatcat-status.ps1
-# set 40 % now
-powershell -ExecutionPolicy Bypass -File .\tools\flatcat-status.ps1 -Brightness 40
-# day/night schedule: 85 % from 07:00, 15 % from 20:00
-powershell -ExecutionPolicy Bypass -File .\tools\flatcat-status.ps1 -Install -Day 85 -Night 15 -DayStart 07:00 -NightStart 20:00
-# remove the schedule
-powershell -ExecutionPolicy Bypass -File .\tools\flatcat-status.ps1 -Uninstall
-```
-
-`-Install` adds a scheduled task that runs at logon and every 15 minutes. It
-only sends a value when the period changes (or the dongle restarted), so if you
-adjust the brightness with the keys, your setting stays until the next
-day/night switch.
-
-Notes:
-
-- The dongle sends the PC's last brightness again each time the keyboard
-  reconnects, because the keyboard does not remember its brightness across a
-  restart. While the dongle is unplugged or the PC is off, the next run of the
-  task restores it.
-- Brightness applies on the keyboard whichever device it is typing to.
-- Battery shows "unknown" while the keyboard is not connected to the dongle.
 
 ## Windows Dynamic Lighting
 
@@ -305,9 +259,6 @@ reproduce the problem and keep the output. Useful lines:
 | `Dynamic Lighting active: interval 6-6, peripheral latency 0` | Windows took control of the lights |
 | `link: interval ... ms, peripheral latency ...`    | Current Bluetooth timing                   |
 | `LA get lamp ...` / `LA set request lamp ...` | Each lamp-attribute request from the PC         |
-| `keyboard battery N %`                        | Battery level received from the keyboard        |
-| `PC asks for brightness N %` / `brightness N % sent to the keyboard` | Brightness from the PC    |
-| `keyboard cannot take brightness from the PC` | Keyboard firmware without the brightness part  |
 
 It also prints every thread's stack use every 30 s.
 
@@ -366,15 +317,13 @@ same effect after waking. See the
 | `CONFIG_ZMK_BT_BRIDGE_PEER_NAME`        | `"FlatCat"` | Name prefix used for the first pairing only               |
 | `CONFIG_ZMK_BT_BRIDGE_PEER_ADDR`        | empty       | Pin one keyboard by address, e.g. `"AA:BB:CC:DD:EE:FF"`    |
 | `CONFIG_ZMK_BT_BRIDGE_CLEAR_BONDS_ON_START` | off     | Forget the keyboard at every start (pairing tests only)   |
-| `CONFIG_ZMK_BT_BRIDGE_LAMP_ARRAY`       | on          | Windows Dynamic Lighting (one more USB HID interface)      |
-| `CONFIG_ZMK_BT_BRIDGE_STATUS`           | on          | Battery to the PC, brightness from the PC (one more interface) |
+| `CONFIG_ZMK_BT_BRIDGE_LAMP_ARRAY`       | on          | Windows Dynamic Lighting (needs `CONFIG_USB_HID_DEVICE_COUNT=2`) |
 | `CONFIG_ZMK_BT_BRIDGE_LAMP_PITCH_UM`    | 19050       | Key pitch reported to Windows, in micrometres             |
 | `CONFIG_ZMK_BT_BRIDGE_LAMP_UPDATE_US`   | 33000       | Shortest update interval reported to Windows              |
 
 The Bluetooth buffer settings in that file (`BT_BUF_ACL_TX_SIZE`,
 `BT_BUF_ACL_TX_COUNT`, `BT_BUF_EVT_RX_COUNT`) are what lets the lamp frames go
-out at link speed; leave them as they are. `CONFIG_USB_HID_DEVICE_COUNT` is
-1 + one per option above (3 with both).
+out at link speed; leave them as they are.
 
 ## How the receiver works
 
@@ -387,8 +336,6 @@ The code lives in `bridge/` and builds only into the dongle:
 - `bt_lamp.c`: the USB HID LampArray interface for Windows, and the sender that
   forwards only the changed lamps to the keyboard's lamp service, in writes as
   large as the link allows.
-- `bt_status.c`: the battery / brightness interface. Reads the keyboard's
-  Battery Service and writes the brightness to the keyboard's lamp service.
 - `bt_bridge_ad.h`: advertisement parsing and the choice of which keyboard to
   connect to. Kept free of Zephyr headers so it can be unit-tested on a PC.
 

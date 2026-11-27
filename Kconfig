@@ -78,21 +78,6 @@ config ZMK_BT_BRIDGE_LAMP_UPDATE_US
 
 endif # ZMK_BT_BRIDGE_LAMP_ARRAY
 
-config ZMK_BT_BRIDGE_STATUS
-    bool "Keyboard battery and PC-set brightness on the dongle"
-    help
-      Adds one more USB HID interface to the dongle:
-      - the keyboard's battery level (read from its Battery Service), as a
-        standard HID Battery Strength input that Linux shows as a battery,
-        and as a vendor feature report that a PC script can read;
-      - a vendor feature report the PC writes to set the keyboard's
-        brightness (0-100 %), e.g. from a day/night schedule.
-
-      Needs CONFIG_USB_HID_DEVICE_COUNT=3 with LAMP_ARRAY (2 without). The
-      brightness part needs CONFIG_RGB_PRO_LAMP_ARRAY_REMOTE on the keyboard
-      (zmk-pro-rgb with the BRIGHTNESS characteristic); battery works with
-      any ZMK keyboard that reports its battery over Bluetooth.
-
 config ZMK_BT_BRIDGE_INIT_PRIORITY
     int "Init priority"
     default 95
