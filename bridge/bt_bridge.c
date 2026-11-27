@@ -133,16 +133,51 @@ static void schedule_scan(uint32_t delay_ms) {
 /* USB side                                                               */
 /* ====================================================================== */
 
-static void forward_keyboard(const uint8_t *data, uint8_t len) {
+/* Put a keyboard report body from the keyboard into ZMK's own report.
+ *
+ * With NKRO and USB boot protocol, ZMK builds the 6-key boot report (BIOS,
+ * UEFI) from a count of held keys that it keeps up to date only through its
+ * press/release calls. So the key bits go through those calls, one per
+ * changed key; copying the bitmap would leave the count at 0 and the boot
+ * report empty. The NKRO range ends below the modifier usages (0xE0+), so no
+ * modifier is in the bitmap; the modifier byte is copied as is. */
+static void set_keyboard_body(const struct zmk_hid_keyboard_report_body *body) {
     struct zmk_hid_keyboard_report *r = zmk_hid_get_keyboard_report();
 
-    if (len != sizeof(r->body)) {
+#if IS_ENABLED(CONFIG_ZMK_HID_REPORT_TYPE_NKRO) && IS_ENABLED(CONFIG_ZMK_USB_BOOT)
+    for (int i = 0; i < (int)sizeof(r->body.keys); i++) {
+        uint8_t changed = r->body.keys[i] ^ body->keys[i];
+
+        for (int b = 0; changed; b++, changed >>= 1) {
+            if (!(changed & 1)) {
+                continue;
+            }
+            zmk_key_t code = i * 8 + b;
+            if (body->keys[i] & BIT(b)) {
+                zmk_hid_keyboard_press(code);
+            } else {
+                zmk_hid_keyboard_release(code);
+            }
+        }
+    }
+    r->body.modifiers = body->modifiers;
+    r->body._reserved = body->_reserved;
+#else
+    memcpy(&r->body, body, sizeof(r->body));
+#endif
+}
+
+static void forward_keyboard(const uint8_t *data, uint8_t len) {
+    struct zmk_hid_keyboard_report_body body;
+
+    if (len != sizeof(body)) {
         LOG_WRN("keyboard report is %d bytes, expected %d: HID options differ between "
                 "keyboard and dongle",
-                len, (int)sizeof(r->body));
+                len, (int)sizeof(body));
         return;
     }
-    memcpy(&r->body, data, len);
+    memcpy(&body, data, len);
+    set_keyboard_body(&body);
     int err = zmk_usb_hid_send_keyboard_report();
     if (err) {
         LOG_DBG("USB keyboard report not sent (%d)", err);
@@ -185,10 +220,10 @@ static void usb_work_handler(struct k_work *work) {
 
 /* The keyboard went away: release everything so no key stays pressed on the PC. */
 static void release_work_handler(struct k_work *work) {
-    struct zmk_hid_keyboard_report *kb = zmk_hid_get_keyboard_report();
+    static const struct zmk_hid_keyboard_report_body none;
     struct zmk_hid_consumer_report *cons = zmk_hid_get_consumer_report();
 
-    memset(&kb->body, 0, sizeof(kb->body));
+    set_keyboard_body(&none);
     memset(&cons->body, 0, sizeof(cons->body));
     zmk_usb_hid_send_keyboard_report();
     zmk_usb_hid_send_consumer_report();

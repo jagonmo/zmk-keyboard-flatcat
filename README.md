@@ -170,8 +170,10 @@ held at once. Limits that come with it:
 - NKRO covers the standard key range, up to keypad `=`. `&kp K_SLEEP` (in the
   keymap) is outside it and is no longer sent; F13–F24 and the language
   keys are also out.
-- Some BIOS/UEFI setup screens only read the 6-key "boot" keyboard. If the
-  keyboard does not work there, use a wired keyboard for BIOS setup.
+- BIOS/UEFI setup screens get a plain 6-key keyboard (USB boot protocol,
+  `CONFIG_ZMK_USB_BOOT=y` on keyboard and dongle), so the keyboard works there
+  through the dongle. Windows and Linux keep NKRO. A few old BIOSes ignore the
+  boot protocol and may still not see it.
 - After flashing, hosts that were paired over Bluetooth before may need to be
   removed and paired again, because they cache the old report layout.
 
@@ -303,6 +305,9 @@ CONFIG_RGB_PRO_STATUS_BT_KEY_BASE=15  # 1 .. 5
 CONFIG_RGB_PRO_BATTERY_KEY_START=0    # ESC
 CONFIG_RGB_PRO_BATTERY_KEY_COUNT=10   # ESC .. F9
 ```
+
+Num lock and scroll lock indicators are available but off; uncomment them in
+`config/flatcat.conf` and set their key positions to use them.
 
 Set `CONFIG_RGB_PRO_STATUS_OVERLAY=n` or `CONFIG_RGB_PRO_BATTERY_INDICATOR=n`
 to turn an indicator off, and `CONFIG_RGB_PRO_RANDOM_ON_WAKE=n` to keep the
